@@ -10,7 +10,7 @@ public class RunnableTest {
         new Thread(new MyThread2(), "A").start();
         new Thread(new MyThread2(), "B").start();
 
-        //测试，讲台代理，调用start方法开始两个线程，实现多线程的效果
+        //测试，静态代理，调用start方法开始两个线程，实现多线程的效果
         //每个线程的任务就是打印100次
         //所以AB线程会交替执行。
     }
