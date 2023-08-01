@@ -27,7 +27,7 @@ public class NPETest {
         System.out.println(wrongFunction(null, 1).size());
     }
 
-    private static List wrongFunction(String s, Integer i) {
+    private static List<Integer> wrongFunction(String s, Integer i) {
         i++;
         System.out.println(i);
         s.equals("ok");
