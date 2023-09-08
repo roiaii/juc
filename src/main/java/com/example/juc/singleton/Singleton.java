@@ -229,6 +229,17 @@ class Singleton {
     } */
 
     //懒汉式（双重检查锁）
+
+    /**
+     * 问题1：为什么还需要第二次判断是否为null？
+     * 线程1拿到锁执行完new一个对象的前两步（符合有序性），此时为null，线程2尝试获取锁失败，线程1执行完成释放锁，线程2继续执行，
+     * 此时，不为null，如果步进行二次检查，线程2会创建出一个新的对象。
+     *
+     * 问题2: 为什么需要volatile修饰？
+     * new一个对象分为3步，1分配内存 2初始化 3引用指向内存 反证 线程1拿到锁，假如执行顺序为132，在执行完13后，线程2发现不为null
+     * 会直接返回对象，但是对象还未初始化。
+     * @param args
+     */
     /*
     private static volatile Singleton singleton = null;
     private Singleton(){}
@@ -236,7 +247,7 @@ class Singleton {
     public static Singleton getInstance() {
         if(singleton == null) {
             synchronized(Singleton.class) {
-                if (singleton == null) {
+                if (singleton == null) { // 为什么还需要第二次判断是否为null？
                     singleton = new Singleton();
                 }
             }
