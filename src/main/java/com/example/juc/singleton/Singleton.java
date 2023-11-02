@@ -260,7 +260,7 @@ class Singleton {
 
 
 
-    public static void main(String[] args) {
+    public static void main2(String[] args) {
 
 
 
@@ -275,5 +275,47 @@ class Singleton {
                 }
             }).start();
         }
+    }
+
+
+    // 死锁
+    class Data1{
+
+    }
+
+    class Data2 {
+
+    }
+
+    public static void main(String[] args) {
+        new Thread(() -> {
+            synchronized (Data1.class) {
+                try {
+                    Thread.sleep(1000);
+                    System.out.println(Thread.currentThread().getName() + "已经拿到 Data1");
+                } catch (Exception e) {
+
+                }
+
+                synchronized (Data2.class) {
+                    System.out.println(Thread.currentThread().getName() + "已经拿到 Data2");
+                }
+            }
+        }).start();
+
+        new Thread(() -> {
+            synchronized (Data2.class) {
+                try {
+                    Thread.sleep(1000);
+                    System.out.println(Thread.currentThread().getName() + "已经拿到 Data2");
+                } catch (Exception e) {
+
+                }
+
+                synchronized (Data1.class) {
+                    System.out.println(Thread.currentThread().getName() + "已经拿到 Data1");
+                }
+            }
+        }).start();
     }
 }
