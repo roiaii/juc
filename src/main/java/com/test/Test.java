@@ -1,90 +1,79 @@
 package com.test;
 
-import java.util.Scanner;
+import org.springframework.context.annotation.Conditional;
 
+import java.sql.SQLOutput;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-
-
-class ListNode {
-    int val;
-    ListNode next;
-    public ListNode(int val, ListNode next) {
-        this.val = val;
-        this.next = next;
-    }
-}
 public class Test {
 
     public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        ListNode h = new ListNode(0, null);
-        int n = sc.nextInt();
-        for (int i=0; i<n; i++) {
-            int e = sc.nextInt();
-            System.out.println("元素：" + e);
-            ListNode l = new ListNode(e, null);
-            // 头插法
-            l.next = h.next;
-            h.next = l;
+        Data data = new Data();
+        for (int i=0; i<10; i++) {
+            new Thread(() -> {
+                data.product();
+            }).start();
         }
 
+        CompletableFuture cf = new CompletableFuture();
 
-        boolean ans = judge(h);
-
-        System.out.println(ans);
-
-    }
-
-    // 判断是否回文链表
-    public static boolean judge (ListNode h) {
-        if (h == null) {
-            return false;
-        }
-
-        int len = 0;
-        ListNode cur = h;
-        while (cur.next != null) {
-            len++;
-            cur = cur.next;
-        }
-
-        int s = len / 2;
-        cur = h;
-        while (s >= 0) {
-            s--;
-            cur = cur.next;
-        }
-
-
-        ListNode reverseList = null;
-        if (len % 2 == 0) {
-            reverseList = reverseList(cur);
-        } else {
-            reverseList = reverseList(cur.next);
-        }
-
-
-
-        ListNode p1 = h.next, p2 = reverseList;
-
-        while (p1 != null && p2 != null) {
-            if (p1.val != p2.val) {
-                return false;
+        new Thread(() -> {
+            for (int i=0; i<10; i++) {
+                data.consumer();
             }
-            p1 = p1.next;
-            p2 = p2.next;
+        }).start();
+    }
+}
+
+class Data {
+    int count = 0;
+
+    Lock lock = new ReentrantLock();
+
+    Condition condition1 = lock.newCondition();
+
+    Condition condition2 = lock.newCondition();
+
+    public void product() {
+        lock.lock();
+        try {
+            while (count > 0) {
+                // this.wait();
+                condition1.await();
+            }
+            // 生产消息
+            count++;
+            System.out.println(Thread.currentThread().getName() + "生产了" + count);
+            // 唤醒消费者
+            // this.notifyAll();
+            condition2.signal();
+        } catch (InterruptedException e) {
+
+        } finally {
+            lock.unlock();
         }
-        return true;
     }
 
-    // 反转链表
-    public static ListNode reverseList (ListNode h) {
-        if (h == null || h.next == null) {
-            return h;
+    public void consumer() {
+        lock.lock();
+        try {
+            while (count == 0) {
+                // this.wait();
+                condition2.await();
+            }
+            // 消费
+            System.out.println(Thread.currentThread().getName() + "消费了" + count);
+            count--;
+            // this.notifyAll();
+            condition1.signal();
+        } catch (InterruptedException e) {
+
+        } finally {
+            lock.unlock();
         }
-        ListNode last = reverseList(h.next);
-        h.next.next = h;
-        h.next = null;
-        return last;
     }
 }

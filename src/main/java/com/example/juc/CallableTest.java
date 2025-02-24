@@ -38,3 +38,25 @@ class MyThread implements Callable<String> {
         return "sb";
     }
 }
+
+class MyThread3 extends Thread {
+    @Override
+    public void run() {
+        System.out.println();
+    }
+}
+
+class MyThread4 implements Runnable {
+    @Override
+    public void run() {
+        System.out.println();
+    }
+}
+
+class MyThread5 implements Callable<String> {
+    @Override
+    public String call() throws Exception{
+
+        return "sb";
+    }
+}

@@ -4,6 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnNotWebAppli
 
 import java.io.PrintStream;
 import java.util.ConcurrentModificationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -88,6 +89,7 @@ public class MySynPrintABC {
     static class Print1 {
         int count = 1;
 
+        ConcurrentHashMap<Integer, Integer> map = new ConcurrentHashMap<>();
         void A() {
             synchronized (this) {
                 while (count != 1) {
@@ -499,3 +501,150 @@ class Print {
         }
     }
 } */
+
+// 再写一遍，三个线程循环打印ABC，控制线程执行顺序
+
+class PrintABC {
+    public static void main(String[] args) {
+        String str1 = "abc";
+        String str2 = "def";
+        Print2 print = new Print2();
+        new Thread(() -> {
+            print.printA(str1);
+        }).start();
+
+        new Thread(() -> {
+            print.printB(str2);
+        }).start();
+        new Thread(() -> {
+            print.printC();
+        }).start();
+    }
+}
+
+// ReentrantLock实现
+class Print1 {
+    private int flag = 1;
+    Lock lock = new ReentrantLock();
+    Condition condition1 = lock.newCondition();
+    Condition condition2 = lock.newCondition();
+    Condition condition3 = lock.newCondition();
+
+    public void printA() {
+        lock.lock();
+        try {
+            while (flag != 1) {
+                condition1.await();
+            }
+            System.out.println(Thread.currentThread().getName() + ":" + "A");
+            flag = 2;
+            condition2.signal();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void printB() {
+        lock.lock();
+        try {
+            while (flag != 2) {
+                condition2.await();
+            }
+            System.out.println(Thread.currentThread().getName() + ":" + "B");
+            flag = 3;
+            condition3.signal();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void printC() {
+        lock.lock();
+        try {
+            while (flag != 3) {
+                condition3.await();
+            }
+            System.out.println(Thread.currentThread().getName() + ":" + "C");
+            flag = 1;
+            condition1.signal();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
+}
+
+// Synchronized实现
+class Print2 {
+    private int flag = 1;
+    Object object = new Object();
+
+    // 共享数据
+    StringBuilder str = new StringBuilder();
+    private int idx = 0;
+
+    public void printA(String str) {
+        synchronized (object) {
+            for (int i=0; i<str.length(); i++) {
+                try {
+                    while (flag != 1) {
+                        object.wait();
+                    }
+                    System.out.println(Thread.currentThread().getName() + ":" + "生产了字符" + str.charAt(i));
+                    this.str.append(str.charAt((i)));
+                    flag = 3;
+                    object.notifyAll();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public void printB(String str) {
+        synchronized (object) {
+            for (int i=0; i<str.length(); i++) {
+                try {
+                    while (flag != 2) {
+                        object.wait();
+                    }
+                    System.out.println(Thread.currentThread().getName() + "生产了字符" + str.charAt(i));
+                    this.str.append(str.charAt(i));
+                    flag = 4;
+                    object.notifyAll();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
+    }
+
+    public void printC() {
+        synchronized (object) {
+            while (idx < 6) {
+                try {
+                    while (flag != 3 && flag != 4) {
+                        object.wait();
+                    }
+                    System.out.println(Thread.currentThread().getName() + "打印了字符" + str.charAt(idx++));
+                    if (flag == 3) {
+                        flag = 2;
+                    } else if (flag == 4) {
+                        flag = 1;
+                    }
+                    object.notifyAll();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
