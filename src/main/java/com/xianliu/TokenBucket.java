@@ -71,37 +71,22 @@ public class TokenBucket {
     }
 }
 
-
-
 // 再写一遍
-
 class TokenBucket2 {
-    private final long capacity; // 桶容量
-    private final double refillRate; // 令牌生产速率
-    private double tokens; // 令牌数量
-    private long lastRefillTime; // 上次生成令牌时间
+    private final long capacity;
+    private double tokens;
+    private double refillRate;
+    private long lastRefillTime;
 
-    public static void main(String[] args) throws InterruptedException {
-        TokenBucket2 tokenBucket2 = new TokenBucket2(10, 1);
-
-        for (int i=0; i<10; i++) {
-            System.out.println("Request" + i + (tokenBucket2.acquireToken() ? "Accepted" : "Denied"));
-            if (i == 5) {
-                Thread.sleep(1000);
-            }
-        }
-    }
-
-
-    public TokenBucket2(long capacity, double refillRate) {
+    public TokenBucket2 (long capacity, double refillRate) {
         this.capacity = capacity;
         this.refillRate = refillRate;
-        this.lastRefillTime = System.currentTimeMillis();
+        tokens = 0;
+        lastRefillTime = System.currentTimeMillis();
     }
 
-    // 请求获取令牌
+    //
     public synchronized boolean acquireToken() {
-        // 先填充令牌
         refillTokens();
         if (tokens > 0) {
             tokens -= 1;
@@ -110,17 +95,21 @@ class TokenBucket2 {
         return false;
     }
 
-    // 填充令牌
     private void refillTokens() {
-        long currentTime = System.currentTimeMillis();
-        double times = (currentTime - lastRefillTime) / 1000.0;
-        // 处理时钟回拨
-        if (times < 0) {
+        long curTime = System.currentTimeMillis();
+        if (curTime < lastRefillTime) {
+            // 时钟回拨
+            /**
+             * 解决
+             * 1. 等待时钟恢复，实现简单，有可能会出现长时间无法恢复，长时间阻塞
+             * 2. 使用逻辑时钟 + 物理时钟，预留出表示逻辑时钟的位，当出现时钟回拨，使用逻辑时钟填充逻辑时钟位。需要维护原子变量逻辑时钟，且逻辑时钟位数有限
+             * 3. 使用zk持有节点记录上次生成令牌的时间，出现时钟回拨，读取持久化的令牌生成时间记录。
+             */
             return;
         }
+        double times = (curTime - lastRefillTime) / 1000;
         double newTokens = times * refillRate;
-        tokens = Math.min(newTokens + tokens, capacity); // 不能超过令牌桶容量
-        lastRefillTime = currentTime;
-        return;
+        tokens = Math.min(capacity, tokens + newTokens);
+        lastRefillTime = curTime;
     }
 }
