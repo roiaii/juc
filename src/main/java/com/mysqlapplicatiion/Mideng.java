@@ -19,6 +19,7 @@ import java.util.BitSet;
  */
 public class Mideng {
 
+    // @Transactional
     public void processPayment(String tradeNo, String orderId, BigDecimal amount) {
 
         try {
